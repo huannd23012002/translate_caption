@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Runtime folders (mount từ host qua volume)
+uploads/
+outputs/
+
+# Dev / IDE
+.env
+.venv/
+venv/
+.cursor/
+*.DS_Store
