@@ -290,6 +290,38 @@ Frontend (React):
 
 ---
 
+---
+
+### [Session 9] — Bug: bản dịch VI và EN bị lệch nhau
+
+**Triệu chứng:**
+- Bản dịch VI và EN không khớp timecode (lệch 1–2 block)
+- Separator `⟦Tháng 9⟧` xuất hiện trong text dịch
+
+**Root cause:**
+Separator `⟦SEP⟧` dùng để join nhiều block trước khi gửi Google Translate.
+Google dịch chữ `SEP` bên trong thành `Tháng 9` (September) → `⟦Tháng 9⟧`.
+Khi split theo `⟦SEP⟧` → không tìm thấy → split thất bại → nội dung nhiều block gộp vào 1 → các block sau bị lệch vị trí.
+
+**Fix:**
+Bỏ hoàn toàn logic batch + separator. Mỗi block dịch **1 request riêng**, tất cả chạy song song via `Promise.all` với stagger 30ms × index.
+
+```
+Trước: join(15 blocks, "⟦SEP⟧") → 1 request → split → dễ lỗi
+Sau:   block[0] → request_0 ─┐
+       block[1] → request_1 ─┤ Promise.all → kết quả đúng vị trí 100%
+       block[N] → request_N ─┘
+```
+
+**Trade-off:** Số HTTP request tăng (53 request thay vì 4 batch), nhưng:
+- Tất cả chạy song song → tổng thời gian không tăng đáng kể (~3–5s)
+- Không bao giờ bị lệch block
+- Code đơn giản hơn nhiều (xoá ~40 dòng)
+
+**File thay đổi:** `lib/srtTranslator.js` — xoá `translateBatch()`, viết lại `translateBlocks()`
+
+---
+
 ## TODO tiếp theo (chưa làm)
 - [ ] Hỗ trợ thêm `.vtt` input
 - [ ] Cho chọn ngôn ngữ nguồn / đích (không chỉ EN→VI)
